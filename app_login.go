@@ -8,6 +8,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -17,10 +18,17 @@ func (m *MainApp) Login() fyne.CanvasObject {
 
 	idEntry := ui.NewEntryWithKeyPress()
 	pwEntry := ui.NewEntryWithKeyPress()
+	pwEntry.Password = true
+	saveLoginBtn := widget.NewCheck("자동 로그인", nil)
+	saveLoginBtn.Checked = true
 
 	loginForm := widget.NewForm(
 		widget.NewFormItem("학번", idEntry),
 		widget.NewFormItem("비밀번호", pwEntry),
+		widget.NewFormItem("", container.NewHBox(
+			layout.NewSpacer(),
+			saveLoginBtn,
+		)),
 	)
 	loginForm.SubmitText = "로그인"
 	loginForm.OnSubmit = func() {
@@ -35,16 +43,17 @@ func (m *MainApp) Login() fyne.CanvasObject {
 			return
 		}
 
-		user, err := m.api.Login(id, pw)
-		if err != nil {
+		if err := m.user.LoginPortal(id, pw); err != nil {
+			idEntry.SetText("")
+			pwEntry.SetText("")
 			m.ShowError(err)
 			return
 		}
 
-		m.app.Preferences().SetString("eclass_id", id)
-		m.app.Preferences().SetString("eclass_pw", pw)
-
-		m.user = user
+		if saveLoginBtn.Checked {
+			m.app.Preferences().SetString("eclass_id", id)
+			m.app.Preferences().SetString("eclass_pw", pw)
+		}
 
 		m.window.SetContent(m.AppTabs())
 	}

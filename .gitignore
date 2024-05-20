@@ -8,6 +8,8 @@
 *.dll
 *.so
 *.dylib
+*.app
+*.zip
 
 # Test binary, built with `go test -c`
 *.test
@@ -22,3 +24,4 @@
 go.work
 
 .idea/
+fyne_*

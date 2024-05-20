@@ -10,7 +10,6 @@ import (
 )
 
 type MainApp struct {
-	api  *api.API
 	user api.User
 
 	w, h    float32
@@ -25,7 +24,7 @@ func NewMainApp() *MainApp {
 		h: 720,
 	}
 
-	m.api = api.New()
+	m.user = api.NewUser()
 
 	m.app = app.NewWithID("kr.mokky.kunsan_univ_eclass")
 	m.app.Settings().SetTheme(&myTheme{})
@@ -53,11 +52,9 @@ func (m *MainApp) Run() {
 		id := m.app.Preferences().String("eclass_id")
 		pw := m.app.Preferences().String("eclass_pw")
 
-		user, err := m.api.Login(id, pw)
-		if err != nil {
+		if err := m.user.LoginPortal(id, pw); err != nil {
 			m.window.SetContent(m.Login())
 		} else {
-			m.user = user
 			m.window.SetContent(m.AppTabs())
 		}
 	}()

@@ -5,83 +5,105 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"regexp"
 	"strings"
-
-	"github.com/PuerkitoBio/goquery"
 )
 
-func (a *API) checkCookie() (User, error) {
-	req, err := http.NewRequest(http.MethodGet, "https://eclass.kunsan.ac.kr/Main.do?cmd=viewHome&userDTO.localeKey=ko", nil)
+type Host string
+
+const (
+	HostPortal Host = "portal.kunsan.ac.kr"
+	HostTKIS   Host = "tkis.kunsan.ac.kr"
+	HostEclass Host = "eclass.kunsan.ac.kr"
+)
+
+func getHostURL(h Host) *url.URL {
+	uri, _ := url.Parse(string("https://" + h))
+	return uri
+}
+
+func (u *user) IsLoggedIn(h Host) bool {
+	return u.cookie.Cookies(getHostURL(h)) != nil
+}
+
+func (u *user) LoginTKIS() error {
+	req, err := http.NewRequest("GET", getHostURL(HostTKIS).String()+"/index.do", nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	req.Header.Set("Referer", "https://eclass.kunsan.ac.kr/Main.do?cmd=viewHome")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+	req.Header.Set("Referer", "https://portal.kunsan.ac.kr/")
 
-	resp, err := a.Client().Do(req)
+	resp, err := u.getClient().Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if doc.Find(`form#loginForm fieldset legend`).First().Text() != "접속자 정보" {
-		return nil, errors.New("옳지 않은 계정입니다")
-	}
-
-	nameInfo := doc.Find(`form#loginForm div.mem_info span.info`).Text()
-	r := regexp.MustCompile(`(\d+)\((.*?)\)님`)
-	match := r.FindStringSubmatch(nameInfo)
-	if len(match) != 3 {
-		return nil, errors.New("접속자 정보를 가져올 수 없습니다")
-	}
-
-	userdata := &user{
-		API:    a,
-		id:     match[1],
-		name:   match[2],
-		imgURL: "https://eclass.kunsan.ac.kr" + doc.Find(`img[alt="userPhoto"]`).AttrOr("src", ""),
-	}
-	return userdata, nil
+	return u.getTKIS()
 }
 
-func (a *API) Login(id, pw string) (User, error) {
+func (u *user) LoginEclass() error {
+	req, err := http.NewRequest("GET", getHostURL(HostEclass).String(), nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+	req.Header.Set("Referer", "https://portal.kunsan.ac.kr/")
+
+	resp, err := u.getClient().Do(req)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return err
+	}
+	return u.getEclass()
+}
+
+func (u *user) LoginPortal(id, pw string) error {
 	if id == "" || pw == "" {
-		return nil, errors.New("아이디 또는 비밀번호를 입력해주세요")
+		return errors.New("아이디 또는 비밀번호를 입력해주세요")
 	}
 
 	values := url.Values{
-		"cmd":      {"loginUser"},
-		"userId":   {id},
-		"password": {pw},
-		"id_save":  {"on"},
+		"userId":     {id},
+		"loginPwd":   {pw},
+		"saveuserid": {"N"},
+		"firstFlag":  {"Y"},
 	}
 
-	req, err := http.NewRequest(http.MethodPost, "https://eclass.kunsan.ac.kr/User.do", strings.NewReader(values.Encode()))
+	req, err := http.NewRequest(http.MethodPost, getHostURL(HostPortal).String()+"/index.do", strings.NewReader(values.Encode()))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Referer", "https://eclass.kunsan.ac.kr/Main.do?cmd=viewHome")
+	req.Header.Set("Referer", "https://portal.kunsan.ac.kr/intro.do?sso=ok")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
 
-	a.cookie, _ = cookiejar.New(nil)
+	u.cookie, _ = cookiejar.New(nil)
+	lastRedirect := ""
 
-	resp, err := a.Client().Do(req)
+	client := u.getClient()
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		lastRedirect = req.URL.Path
+		return nil
+	}
+
+	resp, err := client.Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return a.checkCookie()
+
+	if lastRedirect == "/intro.do" {
+		return errors.New("학번 또는 비밀번호가 올바르지 않습니다")
+	}
+	u.id = id
+	return nil
 }

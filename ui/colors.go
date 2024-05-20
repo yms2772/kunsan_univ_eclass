@@ -13,7 +13,7 @@ type Color struct {
 }
 
 var (
-	ColorBackground = Color{
+	ColorContentBackground = Color{
 		color: color.RGBA{R: 236, G: 239, B: 241, A: 255},
 	}
 	ColorHyperLink = Color{

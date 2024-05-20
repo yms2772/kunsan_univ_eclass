@@ -46,7 +46,6 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 		widget.NewCard("보낸 쪽지", "", messageBoxData[api.MessageTypeSend]),
 	)
 
-	// 탭
 	appTabs := container.NewAppTabs(
 		container.NewTabItem("내 정보", container.NewVScroll(container.NewVBox())),
 		container.NewTabItem("일정", container.NewVScroll(scheduleBox)),
@@ -58,6 +57,13 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 		m.loading.Show()
 		defer m.loading.Hide()
 
+		if !m.user.IsLoggedIn(api.HostEclass) {
+			if err := m.user.LoginEclass(); err != nil {
+				m.window.SetContent(m.Login())
+				return
+			}
+		}
+
 		classroom, err := m.user.GetClassroom()
 		if err != nil {
 			m.window.SetContent(m.Login())
@@ -66,10 +72,16 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 
 		switch tabItem.Text {
 		case "내 정보":
+			if !m.user.IsLoggedIn(api.HostTKIS) {
+				if err := m.user.LoginTKIS(); err != nil {
+					m.window.SetContent(m.Login())
+					return
+				}
+			}
+
 			var subjects []fyne.CanvasObject
 
 			for i, subject := range classroom.Subjects {
-
 				subjects = append(subjects, ui.NewRichTextTappable(fmt.Sprintf("%d. %s", i+1, subject.Name), ui.ColorHyperLink, func() {
 					m.loading.Show()
 					defer m.loading.Hide()
@@ -83,7 +95,7 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 			profileImgCanvas.FillMode = canvas.ImageFillOriginal
 
 			profileBox := container.NewHBox(
-				profileImgCanvas,
+				container.NewVBox(profileImgCanvas),
 				widget.NewForm(
 					widget.NewFormItem("학번", container.NewHBox(
 						widget.NewLabel(m.user.GetID()),
@@ -176,8 +188,9 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 				}
 			}
 
-			appTabs.Items[0].Content = container.NewVScroll(
-				container.NewBorder(profileBox, nil, nil, nil, timetable),
+			appTabs.Items[0].Content = container.NewAppTabs(
+				container.NewTabItem("홈", container.NewVScroll(profileBox)),
+				container.NewTabItem("시간표", container.NewVScroll(timetable)),
 			)
 			appTabs.Items[0].Content.Refresh()
 		case "일정":
@@ -208,7 +221,7 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 					m.loading.Show()
 					defer m.loading.Hide()
 
-					scheduleData, err := m.api.GetSchedule(schedule)
+					scheduleData, err := m.user.GetSchedule(schedule)
 					if err != nil {
 						m.ShowError(errors.New("내용을 불러올 수 없습니다"))
 						return
@@ -250,7 +263,7 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 					)
 
 					contentBox.Remove(checkContentBtn)
-					contentBox.Add(ui.NewBackgroundColorVBox(ui.ColorBackground, objects...))
+					contentBox.Add(ui.NewBackgroundColorVBox(ui.ColorContentBackground, objects...))
 				}
 
 				scheduleBox.Items = append(scheduleBox.Items,
@@ -278,7 +291,7 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 					m.loading.Show()
 					defer m.loading.Hide()
 
-					postData, err := m.api.GetPost(post)
+					postData, err := m.user.GetPost(post)
 					if err != nil {
 						m.ShowError(errors.New("내용을 불러올 수 없습니다"))
 						return
@@ -319,7 +332,7 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 					objects = append(objects, content)
 
 					contentBox.Remove(checkContentBtn)
-					contentBox.Add(ui.NewBackgroundColorVBox(ui.ColorBackground, objects...))
+					contentBox.Add(ui.NewBackgroundColorVBox(ui.ColorContentBackground, objects...))
 				}
 
 				postBoxData[post.Type].Items = append(postBoxData[post.Type].Items,
@@ -348,7 +361,7 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 					m.loading.Show()
 					defer m.loading.Hide()
 
-					messageData, err := m.api.GetMessage(message)
+					messageData, err := m.user.GetMessage(message)
 					if err != nil {
 						m.ShowError(errors.New("내용을 불러올 수 없습니다"))
 						return
@@ -385,7 +398,7 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 					objects = append(objects, content)
 
 					contentBox.Remove(checkContentBtn)
-					contentBox.Add(ui.NewBackgroundColorVBox(ui.ColorBackground, objects...))
+					contentBox.Add(ui.NewBackgroundColorVBox(ui.ColorContentBackground, objects...))
 				}
 
 				messageBoxData[message.Type].Items = append(messageBoxData[message.Type].Items,

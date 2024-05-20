@@ -60,7 +60,7 @@ func (m Message) GetURL() *url.URL {
 	return u
 }
 
-func (a *API) GetMessage(data Message) (MessageData, error) {
+func (u *user) GetMessage(data Message) (MessageData, error) {
 	var message MessageData
 
 	req, err := http.NewRequest(http.MethodGet, data.GetURL().String(), nil)
@@ -71,7 +71,7 @@ func (a *API) GetMessage(data Message) (MessageData, error) {
 	req.Header.Set("Referer", "https://eclass.kunsan.ac.kr/Main.do?cmd=viewHome")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
 
-	resp, err := a.Client().Do(req)
+	resp, err := u.getClient().Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
