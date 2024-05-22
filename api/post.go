@@ -12,10 +12,8 @@ import (
 	"jaytaylor.com/html2text"
 )
 
-type PostType int
-
 const (
-	PostTypeNew PostType = iota
+	PostTypeNew int = iota
 	PostTypeMy
 )
 
@@ -25,7 +23,7 @@ type PostData struct {
 }
 
 type Post struct {
-	Type     PostType
+	Type     int
 	Subject  string
 	Datetime time.Time
 	Category string

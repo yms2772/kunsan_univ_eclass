@@ -8,20 +8,18 @@ import (
 	"strings"
 )
 
-type Host string
-
 const (
-	HostPortal Host = "portal.kunsan.ac.kr"
-	HostTKIS   Host = "tkis.kunsan.ac.kr"
-	HostEclass Host = "eclass.kunsan.ac.kr"
+	HostPortal = "portal.kunsan.ac.kr"
+	HostTKIS   = "tkis.kunsan.ac.kr"
+	HostEclass = "eclass.kunsan.ac.kr"
 )
 
-func getHostURL(h Host) *url.URL {
-	uri, _ := url.Parse(string("https://" + h))
+func getHostURL(h string) *url.URL {
+	uri, _ := url.Parse("https://" + h)
 	return uri
 }
 
-func (u *user) IsLoggedIn(h Host) bool {
+func (u *user) IsLoggedIn(h string) bool {
 	return u.cookie.Cookies(getHostURL(h)) != nil
 }
 
@@ -41,7 +39,7 @@ func (u *user) LoginTKIS() error {
 	if err != nil {
 		return err
 	}
-	return u.getTKIS()
+	return u.updateTKIS()
 }
 
 func (u *user) LoginEclass() error {
@@ -60,7 +58,7 @@ func (u *user) LoginEclass() error {
 	if err != nil {
 		return err
 	}
-	return u.getEclass()
+	return u.updateEclass()
 }
 
 func (u *user) LoginPortal(id, pw string) error {

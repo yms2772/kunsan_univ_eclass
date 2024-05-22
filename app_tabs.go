@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"slices"
+	"strconv"
 	"time"
 
 	"kunsan_univ_eclass/api"
@@ -72,6 +73,9 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 
 		switch tabItem.Text {
 		case "내 정보":
+			m.loading.Show()
+			defer m.loading.Hide()
+
 			if !m.user.IsLoggedIn(api.HostTKIS) {
 				if err := m.user.LoginTKIS(); err != nil {
 					m.window.SetContent(m.Login())
@@ -79,120 +83,214 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 				}
 			}
 
-			var subjects []fyne.CanvasObject
+			myInfoScoreTabs := container.NewAppTabs()
 
-			for i, subject := range classroom.Subjects {
-				subjects = append(subjects, ui.NewRichTextTappable(fmt.Sprintf("%d. %s", i+1, subject.Name), ui.ColorHyperLink, func() {
-					m.loading.Show()
-					defer m.loading.Hide()
+			myInfoTabs := container.NewAppTabs(
+				container.NewTabItem("홈", container.NewVScroll(&fyne.Container{})),
+				container.NewTabItem("시간표", &fyne.Container{}),
+				container.NewTabItem("성적", myInfoScoreTabs),
+			)
 
-					_ = open.Run(subject.GetURL().String())
-				}))
-			}
+			myInfoTabs.OnSelected = func(item *container.TabItem) {
+				m.loading.Show()
+				defer m.loading.Hide()
 
-			profileImg := m.user.GetProfileImg()
-			profileImgCanvas := canvas.NewImageFromImage(profileImg)
-			profileImgCanvas.FillMode = canvas.ImageFillOriginal
+				switch item.Text {
+				case "홈":
+					var subjects []fyne.CanvasObject
 
-			profileBox := container.NewHBox(
-				container.NewVBox(profileImgCanvas),
-				widget.NewForm(
-					widget.NewFormItem("학번", container.NewHBox(
-						widget.NewLabel(m.user.GetID()),
-						ui.NewColorfulHyperlink("로그아웃", ui.ColorLogout, func() {
-							m.window.SetContent(m.Login())
-						}),
-					)),
-					widget.NewFormItem("이름", widget.NewLabel(m.user.GetName())),
-					widget.NewFormItem("수강", container.NewVBox(subjects...)),
-				))
+					for i, subject := range classroom.Subjects {
+						subjects = append(subjects, ui.NewRichTextTappable(fmt.Sprintf("%d. %s", i+1, subject.Name), ui.ColorHyperLink, func() {
+							m.loading.Show()
+							defer m.loading.Hide()
 
-			timetableData, err := m.user.GetTimetable()
-			if err != nil {
-				m.ShowError(errors.New("내용을 불러올 수 없습니다"))
-				return
-			}
-
-			dayStart := time.Date(0, 0, 0, 8, 10, 0, 0, time.UTC)
-
-			timetable := widget.NewTable(
-				func() (rows int, cols int) {
-					return 16, 8
-				},
-				func() fyne.CanvasObject {
-					return &widget.Label{
-						Text:      "",
-						Alignment: fyne.TextAlignCenter,
-						Wrapping:  fyne.TextTruncate,
+							_ = open.Run(subject.GetURL().String())
+						}))
 					}
-				},
-				func(id widget.TableCellID, object fyne.CanvasObject) {
-					label := object.(*widget.Label)
 
-					if id.Row == 0 {
-						switch id.Col {
-						case 0:
-							label.SetText("")
-						case 1:
-							label.SetText("월")
-						case 2:
-							label.SetText("화")
-						case 3:
-							label.SetText("수")
-						case 4:
-							label.SetText("목")
-						case 5:
-							label.SetText("금")
-						case 6:
-							label.SetText("토")
-						case 7:
-							label.SetText("일")
+					profileImg := m.user.GetProfileImg()
+					profileImgCanvas := canvas.NewImageFromImage(profileImg)
+					profileImgCanvas.FillMode = canvas.ImageFillOriginal
+
+					myInfoTabs.Items[0].Content = container.NewHBox(
+						container.NewVBox(profileImgCanvas),
+						widget.NewForm(
+							widget.NewFormItem("학번", container.NewHBox(
+								widget.NewLabel(m.user.GetID()),
+								ui.NewColorfulHyperlink("로그아웃", ui.ColorLogout, func() {
+									m.window.SetContent(m.Login())
+								}),
+							)),
+							widget.NewFormItem("이름", widget.NewLabel(m.user.GetName())),
+							widget.NewFormItem("수강", container.NewVBox(subjects...)),
+						),
+					)
+					myInfoTabs.Items[0].Content.Refresh()
+				case "시간표":
+					timetableData, err := m.user.GetTimetable()
+					if err != nil {
+						m.ShowError(errors.New("내용을 불러올 수 없습니다"))
+						return
+					}
+
+					dayStart := time.Date(0, 0, 0, 8, 10, 0, 0, time.UTC)
+
+					timetable := widget.NewTable(
+						func() (rows int, cols int) {
+							return 16, 8
+						},
+						func() fyne.CanvasObject {
+							return &widget.Label{
+								Text:      "",
+								Alignment: fyne.TextAlignCenter,
+								Wrapping:  fyne.TextTruncate,
+							}
+						},
+						func(id widget.TableCellID, object fyne.CanvasObject) {
+							label := object.(*widget.Label)
+
+							if id.Row == 0 {
+								switch id.Col {
+								case 0:
+									label.SetText("")
+								case 1:
+									label.SetText("월")
+								case 2:
+									label.SetText("화")
+								case 3:
+									label.SetText("수")
+								case 4:
+									label.SetText("목")
+								case 5:
+									label.SetText("금")
+								case 6:
+									label.SetText("토")
+								case 7:
+									label.SetText("일")
+								}
+							} else if id.Col == 0 {
+								classTime := id.Row - 1
+								classStart := dayStart.Add(time.Duration(classTime) * time.Hour)
+								classEnd := classStart.Add(50 * time.Minute)
+
+								label.SetText(fmt.Sprintf("%d교시\n"+
+									"%s ~ %s",
+									classTime,
+									classStart.Format("15:04"),
+									classEnd.Format("15:04"),
+								))
+							} else {
+								label.SetText(fmt.Sprintf("%s\n"+
+									"%s",
+									timetableData[id.Row-1][id.Col-1].Subject,
+									timetableData[id.Row-1][id.Col-1].Professor,
+								))
+							}
+						},
+					)
+
+					timetable.StickyRowCount = 1
+					timetable.StickyColumnCount = 1
+
+					for row := 0; row <= 14; row++ {
+						if row == 0 {
+							timetable.SetRowHeight(row, 30)
+						} else {
+							timetable.SetRowHeight(row, 50)
 						}
-					} else if id.Col == 0 {
-						classTime := id.Row - 1
-						classStart := dayStart.Add(time.Duration(classTime) * time.Hour)
-						classEnd := classStart.Add(50 * time.Minute)
-
-						label.SetText(fmt.Sprintf("%d교시\n"+
-							"%s ~ %s",
-							classTime,
-							classStart.Format("15:04"),
-							classEnd.Format("15:04"),
-						))
-					} else {
-						label.SetText(fmt.Sprintf("%s\n"+
-							"%s",
-							timetableData[id.Row-1][id.Col-1].Subject,
-							timetableData[id.Row-1][id.Col-1].Professor,
-						))
 					}
-				},
-			)
 
-			timetable.StickyRowCount = 1
-			timetable.StickyColumnCount = 1
+					for col := 0; col <= 7; col++ {
+						if col == 0 {
+							timetable.SetColumnWidth(col, 120)
+						} else {
+							timetable.SetColumnWidth(col, 150)
+						}
+					}
 
-			for row := 0; row <= 14; row++ {
-				if row == 0 {
-					timetable.SetRowHeight(row, 30)
-				} else {
-					timetable.SetRowHeight(row, 50)
+					myInfoTabs.Items[1].Content = timetable
+					myInfoTabs.Items[1].Content.Refresh()
+				case "성적":
+					score, err := m.user.GetScore()
+					if err != nil {
+						m.ShowError(errors.New("성적을 불러올 수 없습니다"))
+						return
+					}
+
+					for year, data := range score.Data {
+						for semester, subjects := range data {
+							scoreTable := widget.NewTable(
+								func() (rows int, cols int) {
+									return len(subjects) + 1, 3
+								},
+								func() fyne.CanvasObject {
+									return &widget.Label{
+										Text:      "",
+										Alignment: fyne.TextAlignCenter,
+										Wrapping:  fyne.TextWrapBreak,
+									}
+								},
+								func(id widget.TableCellID, object fyne.CanvasObject) {
+									label := object.(*widget.Label)
+
+									if id.Row == 0 {
+										switch id.Col {
+										case 0:
+											label.SetText("과목")
+										case 1:
+											label.SetText("성적")
+										case 2:
+											label.SetText("학점")
+										}
+									} else {
+										subject := subjects[id.Row-1]
+
+										switch id.Col {
+										case 0:
+											label.SetText(subject.Name)
+										case 1:
+											label.SetText(strconv.Itoa(int(subject.Score)))
+										case 2:
+											label.SetText(subject.Grade)
+										}
+									}
+								},
+							)
+
+							scoreTable.StickyRowCount = 1
+							scoreTable.StickyColumnCount = 1
+
+							for row := 0; row < len(subjects); row++ {
+								if row == 0 {
+									scoreTable.SetRowHeight(row, 30)
+								} else {
+									scoreTable.SetRowHeight(row, 50)
+								}
+							}
+
+							for col := 0; col < 3; col++ {
+								if col == 0 {
+									scoreTable.SetColumnWidth(col, 200)
+								} else {
+									scoreTable.SetColumnWidth(col, 100)
+								}
+							}
+
+							myInfoScoreTabs.Items = append(myInfoScoreTabs.Items,
+								container.NewTabItem(fmt.Sprintf("%d년 %d학기", year+1, semester+1), scoreTable),
+							)
+						}
+					}
+
+					myInfoScoreTabs.Refresh()
 				}
 			}
 
-			for col := 0; col <= 7; col++ {
-				if col == 0 {
-					timetable.SetColumnWidth(col, 120)
-				} else {
-					timetable.SetColumnWidth(col, 150)
-				}
-			}
-
-			appTabs.Items[0].Content = container.NewAppTabs(
-				container.NewTabItem("홈", container.NewVScroll(profileBox)),
-				container.NewTabItem("시간표", container.NewVScroll(timetable)),
-			)
+			appTabs.Items[0].Content = myInfoTabs
 			appTabs.Items[0].Content.Refresh()
+
+			myInfoTabs.SelectIndex(0)
+			myInfoTabs.OnSelected(myInfoTabs.Selected())
 		case "일정":
 			now := time.Now().UTC().Add(9 * time.Hour)
 

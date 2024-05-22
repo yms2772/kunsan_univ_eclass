@@ -3,7 +3,7 @@ package ui
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/widget"
-	"slices"
+	"unicode/utf8"
 )
 
 type KeyPress struct {
@@ -14,19 +14,33 @@ type KeyPress struct {
 type EntryWithKeyPress struct {
 	*widget.Entry
 
-	KeyPress []KeyPress
+	keyPress []KeyPress
+}
+
+func (e *EntryWithKeyPress) defaultKeyPress() []KeyPress {
+	return []KeyPress{
+		{
+			KeyName: fyne.KeyBackspace,
+			OnKeyPress: func() {
+				text := e.Entry.Text
+				if len(text) != 0 {
+					_, size := utf8.DecodeLastRuneInString(text)
+					e.SetText(text[:len(text)-size])
+				}
+			},
+		},
+	}
+}
+
+func (e *EntryWithKeyPress) AddKeyPress(key ...KeyPress) {
+	e.keyPress = append(e.keyPress, key...)
 }
 
 func (e *EntryWithKeyPress) TypedKey(key *fyne.KeyEvent) {
-	idx := slices.IndexFunc(e.KeyPress, func(item KeyPress) bool {
-		return key.Name == item.KeyName
-	})
-	if idx == -1 {
-		return
-	}
-
-	if e.KeyPress[idx].OnKeyPress != nil {
-		e.KeyPress[idx].OnKeyPress()
+	for _, item := range e.keyPress {
+		if item.KeyName == key.Name && item.OnKeyPress != nil {
+			item.OnKeyPress()
+		}
 	}
 }
 
@@ -35,8 +49,9 @@ func NewEntryWithKeyPress(key ...KeyPress) *EntryWithKeyPress {
 		Entry: &widget.Entry{
 			Wrapping: fyne.TextTruncate,
 		},
-		KeyPress: key,
 	}
+	e.AddKeyPress(e.defaultKeyPress()...)
+	e.AddKeyPress(key...)
 	e.ExtendBaseWidget(e)
 	return e
 }

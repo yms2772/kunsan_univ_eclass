@@ -58,12 +58,13 @@ func (m *MainApp) Login() fyne.CanvasObject {
 		m.window.SetContent(m.AppTabs())
 	}
 
-	login := []ui.KeyPress{
-		{KeyName: fyne.KeyReturn, OnKeyPress: loginForm.OnSubmit},
+	login := ui.KeyPress{
+		KeyName:    fyne.KeyReturn,
+		OnKeyPress: loginForm.OnSubmit,
 	}
 
-	idEntry.KeyPress = login
-	pwEntry.KeyPress = login
+	idEntry.AddKeyPress(login)
+	pwEntry.AddKeyPress(login)
 	return container.NewCenter(
 		widget.NewCard("로그인"+strings.Repeat("\t", 6), "", loginForm),
 	)
