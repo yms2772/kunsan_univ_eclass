@@ -77,7 +77,7 @@ func (u *user) GetScore() (ScoreData, error) {
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if err != nil {
+	if err != nil || resp == nil {
 		return data, err
 	}
 

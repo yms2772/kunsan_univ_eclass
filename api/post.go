@@ -80,7 +80,7 @@ func (u *user) GetPost(data Post) (PostData, error) {
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if err != nil {
+	if err != nil || resp == nil {
 		return post, err
 	}
 

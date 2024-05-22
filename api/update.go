@@ -75,7 +75,7 @@ func (u *user) updateTKIS() error {
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if err != nil {
+	if err != nil || resp == nil {
 		return err
 	}
 
