@@ -12,7 +12,7 @@ func (n *notPaddedLayout) Layout(o []fyne.CanvasObject, s fyne.Size) {
 	pad := theme.InnerPadding() * -2
 	pad2 := pad * -2
 
-	o[0].Move(fyne.NewPos(pad+10, pad))
+	o[0].Move(fyne.NewPos(pad+theme.InnerPadding(), pad+theme.InnerPadding()))
 	o[0].Resize(s.Add(fyne.NewSize(pad2, pad2)))
 }
 

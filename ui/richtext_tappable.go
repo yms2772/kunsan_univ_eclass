@@ -6,10 +6,8 @@ import (
 )
 
 type TappableSegment struct {
-	Alignment fyne.TextAlign
-	Text      string
-	Color     Color
-
+	Text     string
+	Color    Color
 	OnTapped func()
 }
 
@@ -24,13 +22,13 @@ func (t *TappableSegment) Textual() string {
 func (t *TappableSegment) Update(object fyne.CanvasObject) {
 	link := object.(*fyne.Container).Objects[0].(*ColorfulHyperlink)
 	link.Text = t.Text
-	link.Alignment = t.Alignment
 	link.OnTapped = t.OnTapped
 	link.Refresh()
 }
 
 func (t *TappableSegment) Visual() fyne.CanvasObject {
-	link := NewColorfulHyperlink(t.Text, t.Color, t.OnTapped)
+	link := NewColorfulHyperlink(t.Text, t.Color, nil)
+	link.OnTapped = t.OnTapped
 	return &fyne.Container{
 		Layout:  &notPaddedLayout{},
 		Objects: []fyne.CanvasObject{link},

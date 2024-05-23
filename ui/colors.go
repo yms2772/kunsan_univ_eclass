@@ -8,7 +8,7 @@ import (
 )
 
 type Color struct {
-	color     color.RGBA
+	color     color.Color
 	colorName fyne.ThemeColorName
 }
 

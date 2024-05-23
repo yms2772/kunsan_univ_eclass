@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"net/url"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/widget"
@@ -23,11 +25,11 @@ func (c *ColorfulHyperlink) CreateRenderer() fyne.WidgetRenderer {
 	return renderer
 }
 
-func NewColorfulHyperlink(text string, color Color, tapped func()) *ColorfulHyperlink {
+func NewColorfulHyperlink(text string, color Color, uri *url.URL) *ColorfulHyperlink {
 	ch := &ColorfulHyperlink{
 		Hyperlink: &widget.Hyperlink{
-			Text:     text,
-			OnTapped: tapped,
+			Text: text,
+			URL:  uri,
 		},
 		color: color,
 	}

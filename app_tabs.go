@@ -100,12 +100,7 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 					var subjects []fyne.CanvasObject
 
 					for i, subject := range classroom.Subjects {
-						subjects = append(subjects, ui.NewRichTextTappable(fmt.Sprintf("%d. %s", i+1, subject.Name), ui.ColorHyperLink, func() {
-							m.loading.Show()
-							defer m.loading.Hide()
-
-							_ = open.Run(subject.GetURL().String())
-						}))
+						subjects = append(subjects, ui.NewColorfulHyperlink(fmt.Sprintf("%d. %s", i+1, subject.Name), ui.ColorHyperLink, subject.GetURL()))
 					}
 
 					profileImg := m.user.GetProfileImg()
@@ -117,7 +112,7 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 						widget.NewForm(
 							widget.NewFormItem("학번", container.NewHBox(
 								widget.NewLabel(m.user.GetID()),
-								ui.NewColorfulHyperlink("로그아웃", ui.ColorLogout, func() {
+								ui.NewRichTextTappable("로그아웃", ui.ColorLogout, func() {
 									m.window.SetContent(m.Login())
 								}),
 							)),
@@ -328,7 +323,7 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 					var objects []fyne.CanvasObject
 
 					for _, item := range scheduleData.Attachments {
-						objects = append(objects, ui.NewColorfulHyperlink(item.Name, ui.ColorHyperLink, func() {
+						objects = append(objects, ui.NewRichTextTappable(item.Name, ui.ColorHyperLink, func() {
 							m.loading.Show()
 							defer m.loading.Hide()
 
@@ -355,9 +350,7 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 
 					objects = append(objects,
 						content,
-						ui.NewColorfulHyperlink("원본 보기", ui.ColorHyperLink, func() {
-							_ = open.Run(schedule.GetURL().String())
-						}),
+						ui.NewColorfulHyperlink("원본 보기", ui.ColorHyperLink, schedule.GetURL()),
 					)
 
 					contentBox.Remove(checkContentBtn)
@@ -420,10 +413,6 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 						}))
 					}
 
-					if len(objects) > 0 {
-						objects = append(objects, widget.NewSeparator())
-					}
-
 					content := widget.NewLabel(postData.Content)
 					content.Wrapping = fyne.TextWrapBreak
 
@@ -468,7 +457,7 @@ func (m *MainApp) AppTabs() fyne.CanvasObject {
 					var objects []fyne.CanvasObject
 
 					for _, item := range messageData.Attachments {
-						objects = append(objects, ui.NewColorfulHyperlink(item.Name, ui.ColorHyperLink, func() {
+						objects = append(objects, ui.NewRichTextTappable(item.Name, ui.ColorHyperLink, func() {
 							m.loading.Show()
 							defer m.loading.Hide()
 
